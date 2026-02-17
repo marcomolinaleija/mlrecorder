@@ -8,10 +8,24 @@ version = "0.1.0"
 description = "Python wrapper for MLRecorder process-audio capture DLL on Windows"
 readme = "python/README.md"
 requires-python = ">=3.10"
+license = { file = "LICENSE" }
 authors = [
-  { name = "MLRecorder contributors" }
+  { name = "Marco Antonio Molina Leija", email = "marcoleija@marco-ml.com" }
+]
+maintainers = [
+  { name = "Marco Antonio Molina Leija", email = "marcoleija@marco-ml.com" }
+]
+keywords = [
+  "audio",
+  "recording",
+  "wasapi",
+  "windows",
+  "loopback",
+  "python",
+  "ctypes"
 ]
 classifiers = [
+  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Operating System :: Microsoft :: Windows",
@@ -19,9 +33,15 @@ classifiers = [
 ]
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/marcomolinaleija/mlrecorder"
+Repository = "https://github.com/marcomolinaleija/mlrecorder"
+Issues = "https://github.com/marcomolinaleija/mlrecorder/issues"
+
 [tool.setuptools]
 include-package-data = true
 package-dir = { "" = "python" }
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["python"]
