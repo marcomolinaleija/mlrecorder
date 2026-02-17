@@ -59,6 +59,12 @@ struct AppState {
     HWND hPassthroughDeviceLabel = nullptr;
     HWND hMonitorOnlyCheckbox = nullptr;
 
+    // Volumen
+    HWND hProcessVolumeSlider = nullptr;
+    HWND hProcessVolumeLabel = nullptr;
+    HWND hMicrophoneVolumeSlider = nullptr;
+    HWND hMicrophoneVolumeLabel = nullptr;
+
     // Estado
     HWND hStatusText = nullptr;
     HWND hLastFocusedCtrl = nullptr;
@@ -106,6 +112,7 @@ void UpdateProcessListLabel();
 // Captura
 void StartCapture();
 void StopCapture();
+void UpdateCaptureVolumes();
 void UpdateRecordingList();
 void EnsureRecordingListFocusItem();
 

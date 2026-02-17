@@ -113,6 +113,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         break;
     }
 
+    case WM_HSCROLL: {
+        if ((HWND)lParam == g_app.hProcessVolumeSlider) {
+            g_app.processVolume = (float)SendMessage(g_app.hProcessVolumeSlider, TBM_GETPOS, 0, 0);
+            UpdateCaptureVolumes();
+        } else if ((HWND)lParam == g_app.hMicrophoneVolumeSlider) {
+            g_app.microphoneVolume = (float)SendMessage(g_app.hMicrophoneVolumeSlider, TBM_GETPOS, 0, 0);
+            UpdateCaptureVolumes();
+        }
+        return 0;
+    }
+
     case WM_COMMAND: {
         int wmId = LOWORD(wParam);
         int wmEvent = HIWORD(wParam);
@@ -230,6 +241,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             SetWindowPos(g_app.hProcessList, nullptr, 10, 25, w - 20, 160, SWP_NOZORDER);
             SetWindowPos(g_app.hRefreshBtn, nullptr, 10, 190, 100, 25, SWP_NOZORDER);
             SetWindowPos(g_app.hShowAudioOnlyCheckbox, nullptr, 120, 193, 320, 20, SWP_NOZORDER);
+            SetWindowPos(g_app.hProcessVolumeLabel, nullptr, 480, 195, 80, 20, SWP_NOZORDER);
+            SetWindowPos(g_app.hProcessVolumeSlider, nullptr, 560, 190, 280, 30, SWP_NOZORDER);
         }
 
         // Micrófono
@@ -237,7 +250,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         SetWindowPos(g_app.hMicrophoneDeviceLabel, nullptr, 190, topOffset, 120, 20, SWP_NOZORDER);
         SetWindowPos(g_app.hMicrophoneDeviceList, nullptr, 310, topOffset - 3, w - 320, 60, SWP_NOZORDER);
 
-        int grabOffset = topOffset + 65;
+        // Mic Volume
+        SetWindowPos(g_app.hMicrophoneVolumeLabel, nullptr, 10, topOffset + 70, 80, 20, SWP_NOZORDER);
+        SetWindowPos(g_app.hMicrophoneVolumeSlider, nullptr, 100, topOffset + 65, 200, 30, SWP_NOZORDER);
+
+        int grabOffset = topOffset + 115;
 
         // Carpeta de salida
         SetWindowPos(g_app.hOutputPathLabel, nullptr, 10, grabOffset, 120, 20, SWP_NOZORDER);
@@ -311,7 +328,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow) {
     RegisterClass(&wc);
 
     g_app.hWnd = CreateWindowEx(0, CLASS_NAME,
-        g_app.supportsProcessCapture ? L"ML Recorder - Grabaci\u00f3n por Proceso" : L"ML Recorder - Audio del Sistema",
+        L"ML Recorder",
         WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 850, 700,
         nullptr, nullptr, hInstance, nullptr);
 

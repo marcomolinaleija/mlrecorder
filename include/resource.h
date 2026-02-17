@@ -39,6 +39,12 @@
 #define IDC_PASSTHROUGH_DEVICE_LABEL 1062
 #define IDC_MONITOR_ONLY_CHECKBOX   1063
 
+// Volumen
+#define IDC_PROCESS_VOLUME_SLIDER   1070
+#define IDC_PROCESS_VOLUME_LABEL    1071
+#define IDC_MICROPHONE_VOLUME_SLIDER 1072
+#define IDC_MICROPHONE_VOLUME_LABEL 1073
+
 // ========== Diálogo Calidad de Audio ==========
 #define IDD_QUALITY_DIALOG          2000
 #define IDC_FORMAT_COMBO            2001

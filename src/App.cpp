@@ -53,10 +53,30 @@ void InitializeControls(HWND hwnd) {
         hwnd, (HMENU)IDC_SHOW_AUDIO_ONLY_CHECKBOX, g_app.hInst, nullptr);
     SendMessage(g_app.hShowAudioOnlyCheckbox, BM_SETCHECK, BST_CHECKED, 0);
 
+    // Volumen de proceso
+    g_app.hProcessVolumeLabel = CreateWindow(L"STATIC", L"Vol. proceso:",
+        vis | SS_LEFT, 480, 195, 80, 20,
+        hwnd, (HMENU)IDC_PROCESS_VOLUME_LABEL, g_app.hInst, nullptr);
+    g_app.hProcessVolumeSlider = CreateWindow(TRACKBAR_CLASS, L"",
+        vis | WS_TABSTOP | TBS_HORZ | TBS_AUTOTICKS, 560, 190, 200, 30,
+        hwnd, (HMENU)IDC_PROCESS_VOLUME_SLIDER, g_app.hInst, nullptr);
+    SendMessage(g_app.hProcessVolumeSlider, TBM_SETRANGE, TRUE, MAKELPARAM(0, 100));
+    SendMessage(g_app.hProcessVolumeSlider, TBM_SETPOS, TRUE, (LPARAM)g_app.processVolume);
+
     // Micrófono
     g_app.hMicrophoneCheckbox = CreateWindow(L"BUTTON", L"Capturar &micr\u00f3fono",
         WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX, 10, 235, 170, 20,
         hwnd, (HMENU)IDC_MICROPHONE_CHECKBOX, g_app.hInst, nullptr);
+
+    // Volumen de micrófono
+    g_app.hMicrophoneVolumeLabel = CreateWindow(L"STATIC", L"Vol. mic:",
+        WS_CHILD | SS_LEFT, 480, 235, 80, 20,
+        hwnd, (HMENU)IDC_MICROPHONE_VOLUME_LABEL, g_app.hInst, nullptr);
+    g_app.hMicrophoneVolumeSlider = CreateWindow(TRACKBAR_CLASS, L"",
+        WS_CHILD | WS_TABSTOP | TBS_HORZ | TBS_AUTOTICKS, 560, 230, 200, 30,
+        hwnd, (HMENU)IDC_MICROPHONE_VOLUME_SLIDER, g_app.hInst, nullptr);
+    SendMessage(g_app.hMicrophoneVolumeSlider, TBM_SETRANGE, TRUE, MAKELPARAM(0, 100));
+    SendMessage(g_app.hMicrophoneVolumeSlider, TBM_SETPOS, TRUE, (LPARAM)g_app.microphoneVolume);
 
     g_app.hMicrophoneDeviceLabel = CreateWindow(L"STATIC", L"Dispositivos de entrada:",
         WS_CHILD | SS_LEFT, 190, 235, 120, 20,

@@ -208,6 +208,16 @@ void StopCapture() {
     }
 }
 
+void UpdateCaptureVolumes() {
+    auto sessions = g_app.captureManager->GetActiveSessions();
+    const DWORD kMicBase = 0xFFFF0000;
+    for (auto* s : sessions) {
+        if (!s->capture) continue;
+        float vol = (s->processId >= kMicBase) ? g_app.microphoneVolume : g_app.processVolume;
+        s->capture->SetVolume(vol / 100.0f);
+    }
+}
+
 void UpdateRecordingList() {
     DWORD selPID = 0;
     int sel = ListView_GetNextItem(g_app.hRecordingList, -1, LVNI_SELECTED);
