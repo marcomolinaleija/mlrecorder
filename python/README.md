@@ -179,6 +179,7 @@ with MLRecorder() as rec:
 - `python/examples/record_pid.py`: ejemplo CLI completo.
 - `python/examples/simple_api_demo.py`: ejemplo usando funciones simples.
 - `python/examples/mixed_process_mic.py`: mezcla proceso + micrófono en un archivo.
+- `python/examples/interactive_console_recorder.py`: asistente interactivo por consola (menus numericos para proceso, microfono y modo).
 
 ## 9) Aislamiento estricto
 
