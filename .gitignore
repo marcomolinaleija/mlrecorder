@@ -1,9 +1,24 @@
 # Build directories
 build/
+build-release/
+dist/
 package/
 vcpkg_installed/
 .vs/
 .vscode/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+build.ninja
+.ninja_deps
+.ninja_log
+compile_commands.json
+*.cmake
+Makefile
+*.ninja
+install_manifest.txt
 
 # Build artifacts
 *.obj
@@ -17,10 +32,16 @@ vcpkg_installed/
 *.opensdf
 *.ipch
 
-# CMake
-CMakeCache.txt
-CMakeFiles/
-*.cmake
-Makefile
-*.ninja
-install_manifest.txt
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+
+# Local package staging (DLLs copied before wheel build)
+python/mlrecorder/bin/*.dll
+!python/mlrecorder/bin/.gitkeep
+
+# Wheels
+*.whl

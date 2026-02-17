@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlrecorder"
+version = "0.1.0"
+description = "Python wrapper for MLRecorder process-audio capture DLL on Windows"
+readme = "python/README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "MLRecorder contributors" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: Microsoft :: Windows",
+  "Topic :: Multimedia :: Sound/Audio :: Capture/Recording",
+]
+dependencies = []
+
+[tool.setuptools]
+include-package-data = true
+package-dir = { "" = "python" }
+
+[tool.setuptools.packages.find]
+where = ["python"]
+include = ["mlrecorder*"]
+
+[tool.setuptools.package-data]
+mlrecorder = ["bin/*.dll"]

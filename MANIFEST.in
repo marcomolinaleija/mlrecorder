@@ -1,0 +1,2 @@
+include python/README.md
+recursive-include python/mlrecorder/bin *.dll

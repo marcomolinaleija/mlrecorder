@@ -45,6 +45,9 @@ public:
     // Check if currently paused
     bool IsPaused() const { return m_isPaused; }
 
+    // Check if current session is process-specific loopback (not system-wide fallback)
+    bool IsProcessSpecific() const { return m_isProcessSpecific; }
+
     // Get audio format information
     WAVEFORMATEX* GetFormat() const { return m_waveFormat; }
 

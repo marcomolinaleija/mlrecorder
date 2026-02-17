@@ -53,26 +53,35 @@ if(NOT TARGET nlohmann_json::nlohmann_json)
    endif()
 endif()
 
-# Source files
-set(SOURCES
-    src/main.cpp
-    src/App.cpp
-    src/AppLogic.cpp
-    src/AppSettings.cpp
+# Shared core sources
+set(CORE_SOURCES
     src/AudioCapture.cpp
+    src/AudioDeviceEnumerator.cpp
     src/ProcessEnumerator.cpp
     src/WavWriter.cpp
     src/Mp3Encoder.cpp
     src/OpusEncoder.cpp
     src/FlacEncoder.cpp
     src/CaptureManager.cpp
-    src/AudioDeviceEnumerator.cpp
     src/AudioMixer.cpp
+)
+
+set(CORE_API_SOURCES
+    src/MLRecorderAPI.cpp
+)
+
+# GUI application sources
+set(APP_SOURCES
+    src/main.cpp
+    src/App.cpp
+    src/AppLogic.cpp
+    src/AppSettings.cpp
     resource.rc
 )
 
-set(HEADERS
+set(CORE_HEADERS
     include/App.h
+    include/MLRecorderAPI.h
     include/AudioCapture.h
     include/ProcessEnumerator.h
     include/WavWriter.h
@@ -85,16 +94,7 @@ set(HEADERS
     include/resource.h
 )
 
-# Create executable
-add_executable(MLRecorder WIN32 ${SOURCES} ${HEADERS})
-
-# Include directories
-target_include_directories(MLRecorder PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-# Link Windows libraries and third-party libraries
-target_link_libraries(MLRecorder PRIVATE
+set(COMMON_WINDOWS_LIBS
     Avrt.lib
     Mmdevapi.lib
     Ksuser.lib
@@ -103,14 +103,61 @@ target_link_libraries(MLRecorder PRIVATE
     Mfuuid.lib
     Ole32.lib
     Shell32.lib
-    Comctl32.lib
     Shlwapi.lib
     Propsys.lib
     RuntimeObject.lib
     Delayimp.lib
+)
+
+set(CORE_THIRD_PARTY_LIBS
     Opus::opus
     Ogg::ogg
     FLAC::FLAC FLAC::FLAC++
+)
+
+# Build core DLL with C ABI for wrappers
+add_library(mlrecorder_core SHARED
+    ${CORE_SOURCES}
+    ${CORE_API_SOURCES}
+    ${CORE_HEADERS}
+)
+
+target_include_directories(mlrecorder_core PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(mlrecorder_core PRIVATE
+    ${COMMON_WINDOWS_LIBS}
+    ${CORE_THIRD_PARTY_LIBS}
+)
+
+target_compile_definitions(mlrecorder_core PRIVATE
+    MLR_CORE_BUILD
+    UNICODE
+    _UNICODE
+    WIN32_LEAN_AND_MEAN
+    NOMINMAX
+)
+
+set_target_properties(mlrecorder_core PROPERTIES
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+)
+
+# Build existing GUI executable
+add_executable(MLRecorder WIN32
+    ${CORE_SOURCES}
+    ${APP_SOURCES}
+    ${CORE_HEADERS}
+)
+
+target_include_directories(MLRecorder PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(MLRecorder PRIVATE
+    ${COMMON_WINDOWS_LIBS}
+    Comctl32.lib
+    ${CORE_THIRD_PARTY_LIBS}
     nlohmann_json::nlohmann_json
 )
 
@@ -131,7 +178,16 @@ target_compile_definitions(MLRecorder PRIVATE
 
 # Enable warnings
 if(MSVC)
+    target_compile_options(mlrecorder_core PRIVATE /W4)
     target_compile_options(MLRecorder PRIVATE /W4)
 else()
+    target_compile_options(mlrecorder_core PRIVATE -Wall -Wextra)
     target_compile_options(MLRecorder PRIVATE -Wall -Wextra)
 endif()
+
+# Install artifacts useful for SDK/wrapper distribution
+install(TARGETS MLRecorder mlrecorder_core
+    RUNTIME DESTINATION .
+    LIBRARY DESTINATION .
+)
+install(FILES include/MLRecorderAPI.h DESTINATION include)
