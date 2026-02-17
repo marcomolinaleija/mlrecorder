@@ -51,6 +51,7 @@ void InitializeControls(HWND hwnd) {
     g_app.hShowAudioOnlyCheckbox = CreateWindow(L"BUTTON", L"Solo procesos con audio activo",
         vis | WS_TABSTOP | BS_AUTOCHECKBOX, 120, 193, 320, 20,
         hwnd, (HMENU)IDC_SHOW_AUDIO_ONLY_CHECKBOX, g_app.hInst, nullptr);
+    SendMessage(g_app.hShowAudioOnlyCheckbox, BM_SETCHECK, BST_CHECKED, 0);
 
     // Micrófono
     g_app.hMicrophoneCheckbox = CreateWindow(L"BUTTON", L"Capturar &micr\u00f3fono",
@@ -182,6 +183,10 @@ void RefreshProcessList() {
         });
 
     bool showAudioOnly = (SendMessage(g_app.hShowAudioOnlyCheckbox, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    std::vector<DWORD> activePids;
+    if (showAudioOnly) {
+        activePids = g_app.processEnum->GetActiveAudioSessionPIDs();
+    }
     UpdateProcessListLabel();
     int displayed = 0;
 
@@ -201,7 +206,11 @@ void RefreshProcessList() {
     for (auto& proc : g_app.processes) {
         if (proc.windowTitle.empty()) proc.windowTitle = g_app.processEnum->GetWindowTitle(proc.processId);
         if (showAudioOnly) {
-            proc.hasActiveAudio = g_app.processEnum->CheckProcessHasActiveAudio(proc.processId);
+            bool isActive = false;
+            for (DWORD pid : activePids) {
+                if (pid == proc.processId) { isActive = true; break; }
+            }
+            proc.hasActiveAudio = isActive;
             if (!proc.hasActiveAudio) continue;
         }
 

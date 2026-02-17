@@ -27,7 +27,11 @@ public:
     std::wstring GetWindowTitle(DWORD processId);
 
     // Check if process has active audio (lazy loading)
+    // Check if process has active audio (lazy loading)
     bool CheckProcessHasActiveAudio(DWORD processId);
+
+    // Get list of PIDs that have active audio sessions (efficient batch)
+    std::vector<DWORD> GetActiveAudioSessionPIDs();
 
 private:
     std::wstring GetProcessName(DWORD processId);
