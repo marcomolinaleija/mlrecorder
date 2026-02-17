@@ -45,3 +45,6 @@ python/mlrecorder/bin/*.dll
 
 # Wheels
 *.whl
+
+# Example outputs
+python/examples/recordings/

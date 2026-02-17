@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "mlrecorder"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python wrapper for MLRecorder process-audio capture DLL on Windows"
 readme = "python/README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [
   { name = "Marco Antonio Molina Leija", email = "marcoleija@marco-ml.com" }
 ]
@@ -25,7 +26,6 @@ keywords = [
   "ctypes"
 ]
 classifiers = [
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Operating System :: Microsoft :: Windows",
@@ -41,7 +41,6 @@ Issues = "https://github.com/marcomolinaleija/mlrecorder/issues"
 [tool.setuptools]
 include-package-data = true
 package-dir = { "" = "python" }
-license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["python"]
