@@ -39,8 +39,6 @@ void InitializeControls(HWND hwnd) {
     ListView_InsertColumn(g_app.hProcessList, 0, &lvc);
     lvc.cx = 280; lvc.pszText = (LPWSTR)L"T\u00edtulo de ventana";
     ListView_InsertColumn(g_app.hProcessList, 1, &lvc);
-    lvc.cx = 250; lvc.pszText = (LPWSTR)L"Ruta";
-    ListView_InsertColumn(g_app.hProcessList, 2, &lvc);
 
     g_app.hRefreshBtn = CreateWindow(L"BUTTON", L"Refrescar (F5)",
         vis | WS_TABSTOP | BS_PUSHBUTTON, 10, 190, 100, 25,
@@ -211,8 +209,7 @@ void RefreshProcessList() {
         lvi.pszText = (LPWSTR)L"[Audio del Sistema - Todos los procesos]";
         lvi.lParam = 0;
         int idx = ListView_InsertItem(g_app.hProcessList, &lvi);
-        ListView_SetItemText(g_app.hProcessList, idx, 1, (LPWSTR)L"Capturar todo el audio del sistema");
-        ListView_SetItemText(g_app.hProcessList, idx, 2, (LPWSTR)L"Loopback del sistema");
+        ListView_SetItemText(g_app.hProcessList, idx, 1, (LPWSTR)L"Loopback del sistema");
         for (DWORD pid : checkedPIDs) {
             if (pid == 0) { ListView_SetCheckState(g_app.hProcessList, idx, TRUE); break; }
         }
@@ -236,7 +233,6 @@ void RefreshProcessList() {
         int idx = ListView_InsertItem(g_app.hProcessList, &lvi);
 
         ListView_SetItemText(g_app.hProcessList, idx, 1, (LPWSTR)proc.windowTitle.c_str());
-        ListView_SetItemText(g_app.hProcessList, idx, 2, (LPWSTR)proc.executablePath.c_str());
 
         for (DWORD pid : checkedPIDs) {
             if (proc.processId == pid) { ListView_SetCheckState(g_app.hProcessList, idx, TRUE); break; }
@@ -248,6 +244,10 @@ void RefreshProcessList() {
     if (showAudioOnly) msg += L" con audio activo";
     msg += L".";
     SetWindowText(g_app.hStatusText, msg.c_str());
+
+    if (displayed > 0) {
+        ListView_SetItemState(g_app.hProcessList, 0, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+    }
 }
 
 void UpdateProcessListLabel() {

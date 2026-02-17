@@ -242,7 +242,8 @@ void UpdateRecordingList() {
         lvi.lParam = (LPARAM)s->processId;
         int idx = ListView_InsertItem(g_app.hRecordingList, &lvi);
         
-        ListView_SetItemText(g_app.hRecordingList, idx, 1, s->monitorOnly ? (LPWSTR)L"[Solo monitoreo]" : (LPWSTR)s->outputFile.c_str());
+        wchar_t* fname = s->monitorOnly ? (wchar_t*)L"[Solo monitoreo]" : PathFindFileNameW(s->outputFile.c_str());
+        ListView_SetItemText(g_app.hRecordingList, idx, 1, fname);
         std::wstring sz = s->monitorOnly ? L"N/A" : FormatFileSize(s->bytesWritten);
         ListView_SetItemText(g_app.hRecordingList, idx, 2, (LPWSTR)sz.c_str());
         if (sel >= 0 && s->processId == selPID) newSel = idx;
