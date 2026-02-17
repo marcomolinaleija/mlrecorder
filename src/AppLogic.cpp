@@ -113,10 +113,12 @@ void StartCapture() {
         std::wstring procName; DWORD pid;
         if (!g_app.supportsProcessCapture) { procName = L"[Audio del Sistema]"; pid = 0; }
         else {
-            wchar_t buf[256], pidBuf[32];
+            wchar_t buf[256];
             ListView_GetItemText(g_app.hProcessList, ci, 0, buf, 256);
-            ListView_GetItemText(g_app.hProcessList, ci, 1, pidBuf, 32);
-            procName = buf; pid = (DWORD)_wtoi(pidBuf);
+            
+            LVITEM item = {}; item.mask = LVIF_PARAM; item.iItem = ci;
+            ListView_GetItem(g_app.hProcessList, &item);
+            procName = buf; pid = (DWORD)item.lParam;
         }
         if (g_app.captureManager->IsCapturing(pid)) { alreadyCapturing++; continue; }
 
@@ -196,9 +198,10 @@ void StartCapture() {
 void StopCapture() {
     int sel = ListView_GetNextItem(g_app.hRecordingList, -1, LVNI_SELECTED);
     if (sel < 0) { MessageBox(g_app.hWnd, L"Seleccione una grabaci\u00f3n para detener.", L"Sin selecci\u00f3n", MB_OK | MB_ICONWARNING); return; }
-    wchar_t pidStr[32];
-    ListView_GetItemText(g_app.hRecordingList, sel, 1, pidStr, 32);
-    DWORD pid = (DWORD)wcstoul(pidStr, nullptr, 10);
+    
+    LVITEM item = {}; item.mask = LVIF_PARAM; item.iItem = sel;
+    ListView_GetItem(g_app.hRecordingList, &item);
+    DWORD pid = (DWORD)item.lParam;
     if (g_app.captureManager->StopCapture(pid)) {
         UpdateRecordingList();
         SetWindowText(g_app.hStatusText, L"Captura detenida.");
@@ -219,9 +222,14 @@ void UpdateCaptureVolumes() {
 }
 
 void UpdateRecordingList() {
+    // UpdateRecordingList
     DWORD selPID = 0;
     int sel = ListView_GetNextItem(g_app.hRecordingList, -1, LVNI_SELECTED);
-    if (sel >= 0) { wchar_t p[32]; ListView_GetItemText(g_app.hRecordingList, sel, 1, p, 32); selPID = (DWORD)wcstoul(p, nullptr, 10); }
+    if (sel >= 0) { 
+        LVITEM item = {}; item.mask = LVIF_PARAM; item.iItem = sel;
+        ListView_GetItem(g_app.hRecordingList, &item);
+        selPID = (DWORD)item.lParam;
+    }
 
     ListView_DeleteAllItems(g_app.hRecordingList);
     auto sessions = g_app.captureManager->GetActiveSessions();
@@ -229,14 +237,14 @@ void UpdateRecordingList() {
 
     for (size_t i = 0; i < sessions.size(); i++) {
         auto* s = sessions[i];
-        LVITEM lvi = {}; lvi.mask = LVIF_TEXT; lvi.iItem = (int)i;
+        LVITEM lvi = {}; lvi.mask = LVIF_TEXT | LVIF_PARAM; lvi.iItem = (int)i;
         lvi.pszText = (LPWSTR)s->processName.c_str();
+        lvi.lParam = (LPARAM)s->processId;
         int idx = ListView_InsertItem(g_app.hRecordingList, &lvi);
-        wchar_t pidStr[32]; swprintf_s(pidStr, L"%lu", s->processId);
-        ListView_SetItemText(g_app.hRecordingList, idx, 1, pidStr);
-        ListView_SetItemText(g_app.hRecordingList, idx, 2, s->monitorOnly ? (LPWSTR)L"[Solo monitoreo]" : (LPWSTR)s->outputFile.c_str());
+        
+        ListView_SetItemText(g_app.hRecordingList, idx, 1, s->monitorOnly ? (LPWSTR)L"[Solo monitoreo]" : (LPWSTR)s->outputFile.c_str());
         std::wstring sz = s->monitorOnly ? L"N/A" : FormatFileSize(s->bytesWritten);
-        ListView_SetItemText(g_app.hRecordingList, idx, 3, (LPWSTR)sz.c_str());
+        ListView_SetItemText(g_app.hRecordingList, idx, 2, (LPWSTR)sz.c_str());
         if (sel >= 0 && s->processId == selPID) newSel = idx;
     }
 

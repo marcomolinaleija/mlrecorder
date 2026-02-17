@@ -37,12 +37,10 @@ void InitializeControls(HWND hwnd) {
     lvc.mask = LVCF_TEXT | LVCF_WIDTH;
     lvc.cx = 200; lvc.pszText = (LPWSTR)L"Nombre del proceso";
     ListView_InsertColumn(g_app.hProcessList, 0, &lvc);
-    lvc.cx = 60; lvc.pszText = (LPWSTR)L"PID";
-    ListView_InsertColumn(g_app.hProcessList, 1, &lvc);
     lvc.cx = 280; lvc.pszText = (LPWSTR)L"T\u00edtulo de ventana";
-    ListView_InsertColumn(g_app.hProcessList, 2, &lvc);
+    ListView_InsertColumn(g_app.hProcessList, 1, &lvc);
     lvc.cx = 250; lvc.pszText = (LPWSTR)L"Ruta";
-    ListView_InsertColumn(g_app.hProcessList, 3, &lvc);
+    ListView_InsertColumn(g_app.hProcessList, 2, &lvc);
 
     g_app.hRefreshBtn = CreateWindow(L"BUTTON", L"Refrescar (F5)",
         vis | WS_TABSTOP | BS_PUSHBUTTON, 10, 190, 100, 25,
@@ -163,12 +161,10 @@ void InitializeControls(HWND hwnd) {
 
     lvc.cx = 180; lvc.pszText = (LPWSTR)L"Proceso";
     ListView_InsertColumn(g_app.hRecordingList, 0, &lvc);
-    lvc.cx = 80; lvc.pszText = (LPWSTR)L"PID";
-    ListView_InsertColumn(g_app.hRecordingList, 1, &lvc);
     lvc.cx = 380; lvc.pszText = (LPWSTR)L"Archivo";
-    ListView_InsertColumn(g_app.hRecordingList, 2, &lvc);
+    ListView_InsertColumn(g_app.hRecordingList, 1, &lvc);
     lvc.cx = 100; lvc.pszText = (LPWSTR)L"Tama\u00f1o";
-    ListView_InsertColumn(g_app.hRecordingList, 3, &lvc);
+    ListView_InsertColumn(g_app.hRecordingList, 2, &lvc);
 
     // Barra de estado
     g_app.hStatusText = CreateWindowEx(WS_EX_CLIENTEDGE, L"STATIC",
@@ -188,9 +184,9 @@ void RefreshProcessList() {
     int itemCount = ListView_GetItemCount(g_app.hProcessList);
     for (int i = 0; i < itemCount; i++) {
         if (ListView_GetCheckState(g_app.hProcessList, i)) {
-            wchar_t pidStr[32];
-            ListView_GetItemText(g_app.hProcessList, i, 1, pidStr, 32);
-            checkedPIDs.push_back((DWORD)_wtoi(pidStr));
+            LVITEM item = {}; item.mask = LVIF_PARAM; item.iItem = i;
+            ListView_GetItem(g_app.hProcessList, &item);
+            checkedPIDs.push_back((DWORD)item.lParam);
         }
     }
 
@@ -211,12 +207,12 @@ void RefreshProcessList() {
     int displayed = 0;
 
     if (!showAudioOnly) {
-        LVITEM lvi = {}; lvi.mask = LVIF_TEXT; lvi.iItem = 0;
+        LVITEM lvi = {}; lvi.mask = LVIF_TEXT | LVIF_PARAM; lvi.iItem = 0;
         lvi.pszText = (LPWSTR)L"[Audio del Sistema - Todos los procesos]";
+        lvi.lParam = 0;
         int idx = ListView_InsertItem(g_app.hProcessList, &lvi);
-        ListView_SetItemText(g_app.hProcessList, idx, 1, (LPWSTR)L"0");
-        ListView_SetItemText(g_app.hProcessList, idx, 2, (LPWSTR)L"Capturar todo el audio del sistema");
-        ListView_SetItemText(g_app.hProcessList, idx, 3, (LPWSTR)L"Loopback del sistema");
+        ListView_SetItemText(g_app.hProcessList, idx, 1, (LPWSTR)L"Capturar todo el audio del sistema");
+        ListView_SetItemText(g_app.hProcessList, idx, 2, (LPWSTR)L"Loopback del sistema");
         for (DWORD pid : checkedPIDs) {
             if (pid == 0) { ListView_SetCheckState(g_app.hProcessList, idx, TRUE); break; }
         }
@@ -234,15 +230,13 @@ void RefreshProcessList() {
             if (!proc.hasActiveAudio) continue;
         }
 
-        LVITEM lvi = {}; lvi.mask = LVIF_TEXT; lvi.iItem = displayed;
+        LVITEM lvi = {}; lvi.mask = LVIF_TEXT | LVIF_PARAM; lvi.iItem = displayed;
         lvi.pszText = (LPWSTR)proc.processName.c_str();
+        lvi.lParam = (LPARAM)proc.processId;
         int idx = ListView_InsertItem(g_app.hProcessList, &lvi);
 
-        wchar_t pidStr[32];
-        swprintf_s(pidStr, L"%lu", proc.processId);
-        ListView_SetItemText(g_app.hProcessList, idx, 1, pidStr);
-        ListView_SetItemText(g_app.hProcessList, idx, 2, (LPWSTR)proc.windowTitle.c_str());
-        ListView_SetItemText(g_app.hProcessList, idx, 3, (LPWSTR)proc.executablePath.c_str());
+        ListView_SetItemText(g_app.hProcessList, idx, 1, (LPWSTR)proc.windowTitle.c_str());
+        ListView_SetItemText(g_app.hProcessList, idx, 2, (LPWSTR)proc.executablePath.c_str());
 
         for (DWORD pid : checkedPIDs) {
             if (proc.processId == pid) { ListView_SetCheckState(g_app.hProcessList, idx, TRUE); break; }
