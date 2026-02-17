@@ -50,7 +50,7 @@ Esto hace:
 Salida esperada (ejemplo):
 
 ```text
-dist/mlrecorder-0.1.0-py3-none-win_amd64.whl
+dist/mlrecorder-0.1.1-py3-none-win_amd64.whl
 ```
 
 ## 4) Checklist de release
@@ -66,13 +66,13 @@ python/PYPI_RELEASE_CHECKLIST.md
 Desde la raíz del repo:
 
 ```bat
-pip install dist\mlrecorder-0.1.0-py3-none-win_amd64.whl
+pip install dist\mlrecorder-0.1.1-py3-none-win_amd64.whl
 ```
 
 Para reinstalar en desarrollo:
 
 ```bat
-pip install --force-reinstall dist\mlrecorder-0.1.0-py3-none-win_amd64.whl
+pip install --force-reinstall dist\mlrecorder-0.1.1-py3-none-win_amd64.whl
 ```
 
 ## 6) API simple (la que pediste)
