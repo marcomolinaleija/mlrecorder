@@ -1,0 +1,38 @@
+#include "include/resource.h"
+#include <windows.h>
+
+// Version info
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS__WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "0C0A04B0"
+        BEGIN
+            VALUE "FileDescription", "ML Recorder - Grabador de Audio por Proceso"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "MLRecorder"
+            VALUE "OriginalFilename", "MLRecorder.exe"
+            VALUE "ProductName", "ML Recorder"
+            VALUE "ProductVersion", "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0C0A, 1200
+    END
+END
+
+// Accelerators
+IDR_ACCELERATOR ACCELERATORS
+BEGIN
+    "O",            IDM_FILE_OPEN_FOLDER,   VIRTKEY, CONTROL, NOINVERT
+    "Q",            IDM_CONFIG_QUALITY,     VIRTKEY, CONTROL, NOINVERT
+    VK_F5,          IDC_REFRESH_BTN,        VIRTKEY, NOINVERT
+END

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "ml-recorder",
+  "version": "1.0.0",
+  "dependencies": [
+    "opus",
+    "libflac",
+    "nlohmann-json",
+    "pkgconf"
+  ],
+  "builtin-baseline": "a42af01b72c28a8e1d7b48107b33e4f286a55ef6",
+  "overrides": []
+}

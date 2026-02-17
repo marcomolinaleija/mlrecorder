@@ -1,0 +1,26 @@
+# Build directories
+build/
+package/
+vcpkg_installed/
+.vs/
+.vscode/
+
+# Build artifacts
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.suo
+*.sln
+*.user
+*.sdf
+*.opensdf
+*.ipch
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+*.cmake
+Makefile
+*.ninja
+install_manifest.txt
