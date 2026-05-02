@@ -673,12 +673,34 @@ void AudioCapture::CaptureThread() {
     const DWORD sleepMs = 10;
 
     bool unexpectedEnd = false;
+    int processCheckCounter = 0;
+    const int processCheckInterval = 50; // check every ~500ms (50 * 10ms)
 
     while (m_isCapturing && !unexpectedEnd) {
         Sleep(sleepMs);
 
         if (!m_isCapturing) {
             break;
+        }
+
+        // For process-specific capture, check periodically if the process is still alive.
+        // WASAPI does not return an error when the target process exits — it just stops
+        // delivering packets, so we must detect exit explicitly.
+        if (m_targetProcessId != 0 && m_isProcessSpecific) {
+            if (++processCheckCounter >= processCheckInterval) {
+                processCheckCounter = 0;
+                HANDLE hProcess = OpenProcess(SYNCHRONIZE, FALSE, m_targetProcessId);
+                if (!hProcess) {
+                    unexpectedEnd = true;
+                    break;
+                }
+                const DWORD waitResult = WaitForSingleObject(hProcess, 0);
+                CloseHandle(hProcess);
+                if (waitResult == WAIT_OBJECT_0) {
+                    unexpectedEnd = true;
+                    break;
+                }
+            }
         }
 
         UINT32 packetLength = 0;
