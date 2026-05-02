@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mlrecorder"
-version = "0.2.0"
+version = "0.2.1"
 description = "Python wrapper for MLRecorder process-audio capture DLL on Windows"
 readme = "python/README.md"
 requires-python = ">=3.10"
