@@ -91,11 +91,26 @@ bool CaptureManager::StartCapture(DWORD processId, const std::wstring& processNa
         OnAudioData(processId, data, size);
     });
 
-    // Start capture
+    // Set ended callback (fires from capture thread on unexpected exit)
+    session->capture->SetEndedCallback([this, processId]() {
+        std::function<void(DWORD)> cb;
+        {
+            std::lock_guard<std::mutex> lock(m_callbackMutex);
+            cb = m_sessionEndedCallback;
+        }
+        if (cb) {
+            cb(processId);
+        }
+    });
+
+    // Start capture and record start time
     if (!session->capture->Start()) {
         return false;
     }
 
+    session->startTime = std::chrono::steady_clock::now();
+    session->totalPausedDuration = std::chrono::duration<double>::zero();
+    session->isPausedForTiming = false;
     session->isActive = true;
     m_sessions[processId] = std::move(session);
 
@@ -170,11 +185,26 @@ bool CaptureManager::StartCaptureFromDevice(DWORD sessionId, const std::wstring&
         OnAudioData(sessionId, data, size);
     });
 
-    // Start capture
+    // Set ended callback
+    session->capture->SetEndedCallback([this, sessionId]() {
+        std::function<void(DWORD)> cb;
+        {
+            std::lock_guard<std::mutex> lock(m_callbackMutex);
+            cb = m_sessionEndedCallback;
+        }
+        if (cb) {
+            cb(sessionId);
+        }
+    });
+
+    // Start capture and record start time
     if (!session->capture->Start()) {
         return false;
     }
 
+    session->startTime = std::chrono::steady_clock::now();
+    session->totalPausedDuration = std::chrono::duration<double>::zero();
+    session->isPausedForTiming = false;
     session->isActive = true;
     m_sessions[sessionId] = std::move(session);
 
@@ -260,7 +290,12 @@ bool CaptureManager::PauseCapture(DWORD processId) {
     if (it == m_sessions.end() || !it->second->capture) {
         return false;
     }
+    if (it->second->capture->IsPaused()) {
+        return true;
+    }
     it->second->capture->Pause();
+    it->second->isPausedForTiming = true;
+    it->second->pauseStartTime = std::chrono::steady_clock::now();
     return true;
 }
 
@@ -270,7 +305,15 @@ bool CaptureManager::ResumeCapture(DWORD processId) {
     if (it == m_sessions.end() || !it->second->capture) {
         return false;
     }
+    if (!it->second->capture->IsPaused()) {
+        return true;
+    }
     it->second->capture->Resume();
+    if (it->second->isPausedForTiming) {
+        it->second->totalPausedDuration +=
+            std::chrono::steady_clock::now() - it->second->pauseStartTime;
+        it->second->isPausedForTiming = false;
+    }
     return true;
 }
 
@@ -281,6 +324,31 @@ bool CaptureManager::IsPaused(DWORD processId) const {
         return false;
     }
     return it->second->capture->IsPaused();
+}
+
+bool CaptureManager::GetSessionStats(DWORD processId, uint64_t& outBytes, double& outSeconds, bool& outIsPaused) const {
+    std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_mutex));
+    auto it = m_sessions.find(processId);
+    if (it == m_sessions.end()) {
+        return false;
+    }
+    const CaptureSession* s = it->second.get();
+    outBytes = s->bytesWritten;
+    outIsPaused = s->capture ? s->capture->IsPaused() : false;
+
+    auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - s->startTime);
+    auto paused = s->totalPausedDuration;
+    if (s->isPausedForTiming) {
+        paused += std::chrono::duration<double>(std::chrono::steady_clock::now() - s->pauseStartTime);
+    }
+    outSeconds = (elapsed - paused).count();
+    if (outSeconds < 0.0) outSeconds = 0.0;
+    return true;
+}
+
+void CaptureManager::SetSessionEndedCallback(std::function<void(DWORD)> callback) {
+    std::lock_guard<std::mutex> lock(m_callbackMutex);
+    m_sessionEndedCallback = std::move(callback);
 }
 
 std::vector<CaptureSession*> CaptureManager::GetActiveSessions() {

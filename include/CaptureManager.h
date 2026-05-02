@@ -11,6 +11,8 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
+#include <chrono>
+#include <functional>
 
 enum class AudioFormat {
     WAV,
@@ -33,6 +35,12 @@ struct CaptureSession {
     UINT64 bytesWritten;
     bool skipSilence;
     bool monitorOnly;
+
+    // Stats
+    std::chrono::steady_clock::time_point startTime;
+    std::chrono::duration<double> totalPausedDuration{};
+    std::chrono::steady_clock::time_point pauseStartTime;
+    bool isPausedForTiming = false;
 };
 
 class CaptureManager {
@@ -71,6 +79,13 @@ public:
     bool ResumeCapture(DWORD processId);
     bool IsPaused(DWORD processId) const;
 
+    // Stats: bytes written and net recording duration (excludes paused time).
+    bool GetSessionStats(DWORD processId, uint64_t& outBytes, double& outSeconds, bool& outIsPaused) const;
+
+    // Callback fired (from the capture thread) when a session ends unexpectedly.
+    // Pass nullptr to clear. Not thread-safe with concurrent recording start/stop.
+    void SetSessionEndedCallback(std::function<void(DWORD)> callback);
+
     // Stop all captures
     void StopAllCaptures();
 
@@ -92,6 +107,9 @@ private:
 
     std::map<DWORD, std::unique_ptr<CaptureSession>> m_sessions;
     std::mutex m_mutex;
+
+    std::function<void(DWORD)> m_sessionEndedCallback;
+    std::mutex m_callbackMutex;
 
     // Mixed recording members
     bool m_mixedRecordingEnabled;

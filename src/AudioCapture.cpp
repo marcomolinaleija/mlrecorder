@@ -672,10 +672,11 @@ void AudioCapture::CaptureThread() {
     // Poll every 10ms
     const DWORD sleepMs = 10;
 
-    while (m_isCapturing) {
+    bool unexpectedEnd = false;
+
+    while (m_isCapturing && !unexpectedEnd) {
         Sleep(sleepMs);
 
-        // Check if we should stop
         if (!m_isCapturing) {
             break;
         }
@@ -683,16 +684,18 @@ void AudioCapture::CaptureThread() {
         UINT32 packetLength = 0;
         HRESULT hr = m_captureClient->GetNextPacketSize(&packetLength);
         if (FAILED(hr)) {
+            unexpectedEnd = true;
             break;
         }
 
-        while (packetLength > 0 && m_isCapturing) {
+        while (packetLength > 0 && m_isCapturing && !unexpectedEnd) {
             BYTE* data = nullptr;
             UINT32 numFramesAvailable = 0;
             DWORD flags = 0;
 
             hr = m_captureClient->GetBuffer(&data, &numFramesAvailable, &flags, nullptr, nullptr);
             if (FAILED(hr)) {
+                unexpectedEnd = true;
                 break;
             }
 
@@ -714,25 +717,15 @@ void AudioCapture::CaptureThread() {
 
                     // If passthrough is enabled, also send to render device
                     if (m_passthroughEnabled && m_audioRenderClient && m_renderClient) {
-                        // Get padding (how much is already in the buffer)
                         UINT32 numFramesPadding = 0;
                         if (SUCCEEDED(m_renderClient->GetCurrentPadding(&numFramesPadding))) {
-                            // Calculate how many frames we can write
                             UINT32 renderFramesAvailable = m_renderBufferFrameCount - numFramesPadding;
-
-                            // Calculate how many frames we have from capture
-                            UINT32 captureFrames = numFramesAvailable;
-
-                            // Only write as many frames as we have available, and don't exceed buffer space
-                            UINT32 framesToWrite = std::min(renderFramesAvailable, captureFrames);
-
+                            UINT32 framesToWrite = std::min(renderFramesAvailable, numFramesAvailable);
                             if (framesToWrite > 0) {
                                 BYTE* renderBuffer = nullptr;
                                 if (SUCCEEDED(m_audioRenderClient->GetBuffer(framesToWrite, &renderBuffer))) {
-                                    // Copy audio data to render buffer
                                     UINT32 bytesToCopy = framesToWrite * m_waveFormat->nBlockAlign;
                                     memcpy(renderBuffer, buffer.data(), bytesToCopy);
-
                                     m_audioRenderClient->ReleaseBuffer(framesToWrite, 0);
                                 }
                             }
@@ -743,16 +736,17 @@ void AudioCapture::CaptureThread() {
 
             hr = m_captureClient->ReleaseBuffer(numFramesAvailable);
             if (FAILED(hr)) {
+                unexpectedEnd = true;
                 break;
             }
 
-            // Check if we should stop before getting next packet
             if (!m_isCapturing) {
                 break;
             }
 
             hr = m_captureClient->GetNextPacketSize(&packetLength);
             if (FAILED(hr)) {
+                unexpectedEnd = true;
                 break;
             }
         }
@@ -760,6 +754,10 @@ void AudioCapture::CaptureThread() {
 
     if (hTask) {
         AvRevertMmThreadCharacteristics(hTask);
+    }
+
+    if (unexpectedEnd && m_endedCallback) {
+        m_endedCallback();
     }
 }
 

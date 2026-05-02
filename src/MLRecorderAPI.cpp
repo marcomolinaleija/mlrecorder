@@ -31,6 +31,11 @@ struct RuntimeState {
     std::unique_ptr<ProcessEnumerator> processEnumerator;
     std::unique_ptr<AudioDeviceEnumerator> audioDeviceEnumerator;
     std::unordered_map<std::wstring, DWORD> activeInputSessions;
+
+    // Session-ended callback (set independently of initialization)
+    MLR_SessionEndedCallback sessionEndedCallback = nullptr;
+    void* sessionEndedUserData = nullptr;
+    std::mutex callbackMutex;
 };
 
 RuntimeState& State() {
@@ -409,6 +414,30 @@ int mlr_initialize(void) {
         state.captureManager = std::make_unique<CaptureManager>();
         state.processEnumerator = std::make_unique<ProcessEnumerator>();
         state.audioDeviceEnumerator = std::make_unique<AudioDeviceEnumerator>();
+
+        // Apply any callback registered before initialize()
+        MLR_SessionEndedCallback presetCb = nullptr;
+        void* presetUd = nullptr;
+        {
+            std::lock_guard<std::mutex> cbLock(state.callbackMutex);
+            presetCb = state.sessionEndedCallback;
+            presetUd = state.sessionEndedUserData;
+        }
+        if (presetCb) {
+            state.captureManager->SetSessionEndedCallback([](DWORD sessionId) {
+                RuntimeState& s = State();
+                MLR_SessionEndedCallback cb = nullptr;
+                void* ud = nullptr;
+                {
+                    std::lock_guard<std::mutex> cbLock(s.callbackMutex);
+                    cb = s.sessionEndedCallback;
+                    ud = s.sessionEndedUserData;
+                }
+                if (cb) {
+                    cb(static_cast<uint32_t>(sessionId), ud);
+                }
+            });
+        }
     } catch (...) {
         if (state.coInitializedByUs) {
             CoUninitialize();
@@ -849,6 +878,105 @@ int mlr_get_active_session_count(void) {
     }
     const std::vector<CaptureSession*> sessions = state.captureManager->GetActiveSessions();
     return static_cast<int>(sessions.size());
+}
+
+void mlr_set_session_ended_callback(MLR_SessionEndedCallback callback, void* user_data) {
+    RuntimeState& state = State();
+    {
+        std::lock_guard<std::mutex> lock(state.callbackMutex);
+        state.sessionEndedCallback = callback;
+        state.sessionEndedUserData = user_data;
+    }
+    std::lock_guard<std::mutex> lock(state.mutex);
+    if (state.captureManager) {
+        if (callback) {
+            state.captureManager->SetSessionEndedCallback([](DWORD sessionId) {
+                RuntimeState& s = State();
+                MLR_SessionEndedCallback cb = nullptr;
+                void* ud = nullptr;
+                {
+                    std::lock_guard<std::mutex> cbLock(s.callbackMutex);
+                    cb = s.sessionEndedCallback;
+                    ud = s.sessionEndedUserData;
+                }
+                if (cb) {
+                    cb(static_cast<uint32_t>(sessionId), ud);
+                }
+            });
+        } else {
+            state.captureManager->SetSessionEndedCallback(nullptr);
+        }
+    }
+}
+
+int mlr_get_session_stats(uint32_t process_id, MLR_SessionStats* out_stats) {
+    RuntimeState& state = State();
+    std::lock_guard<std::mutex> lock(state.mutex);
+
+    const int initStatus = EnsureInitializedAndOwnedThreadLocked();
+    if (initStatus != MLR_OK) {
+        return initStatus;
+    }
+    if (!out_stats) {
+        SetLastErrorLocked("out_stats is null");
+        return MLR_E_INVALID_ARGUMENT;
+    }
+
+    uint64_t bytes = 0;
+    double seconds = 0.0;
+    bool isPaused = false;
+    if (!state.captureManager->GetSessionStats(process_id, bytes, seconds, isPaused)) {
+        SetLastErrorLocked("Capture session not found");
+        return MLR_E_PROCESS_NOT_FOUND;
+    }
+
+    out_stats->bytes_written = bytes;
+    out_stats->duration_seconds = seconds;
+    out_stats->is_paused = isPaused ? 1 : 0;
+    SetLastErrorLocked(std::string());
+    return MLR_OK;
+}
+
+int mlr_get_microphone_stats(const char* input_device_id_utf8, MLR_SessionStats* out_stats) {
+    RuntimeState& state = State();
+    std::lock_guard<std::mutex> lock(state.mutex);
+
+    const int initStatus = EnsureInitializedAndOwnedThreadLocked();
+    if (initStatus != MLR_OK) {
+        return initStatus;
+    }
+    if (!out_stats) {
+        SetLastErrorLocked("out_stats is null");
+        return MLR_E_INVALID_ARGUMENT;
+    }
+
+    const std::wstring requestedDeviceId = Utf8ToWide(input_device_id_utf8);
+    AudioDeviceInfo inputDevice{};
+    size_t inputIndex = 0;
+    if (!ResolveInputDeviceLocked(requestedDeviceId, &inputDevice, &inputIndex)) {
+        SetLastErrorLocked("Input device not found");
+        return MLR_E_DEVICE_NOT_FOUND;
+    }
+
+    DWORD sessionId = BuildMicSessionId(inputIndex);
+    auto mapped = state.activeInputSessions.find(inputDevice.deviceId);
+    if (mapped != state.activeInputSessions.end()) {
+        sessionId = mapped->second;
+    }
+
+    uint64_t bytes = 0;
+    double seconds = 0.0;
+    bool isPaused = false;
+    if (!state.captureManager->GetSessionStats(sessionId, bytes, seconds, isPaused)) {
+        SetLastErrorLocked("Microphone capture session not found");
+        return MLR_E_NOT_CAPTURING;
+    }
+
+    out_stats->bytes_written = bytes;
+    out_stats->duration_seconds = seconds;
+    out_stats->is_paused = isPaused ? 1 : 0;
+    SetLastErrorLocked(std::string());
+    return MLR_OK;
 }
 
 int mlr_start_microphone_capture_to_file(

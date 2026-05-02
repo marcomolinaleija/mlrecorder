@@ -33,6 +33,10 @@ public:
     // Stop capturing audio
     void Stop();
 
+    // Set callback invoked when capture ends unexpectedly (device error, process exit).
+    // Called from the capture thread — do not call API functions from inside it.
+    void SetEndedCallback(std::function<void()> callback) { m_endedCallback = std::move(callback); }
+
     // Pause capturing audio
     void Pause();
 
@@ -80,6 +84,7 @@ private:
     std::atomic<bool> m_isPaused;
     std::thread m_captureThread;
     std::function<void(const BYTE*, UINT32)> m_dataCallback;
+    std::function<void()> m_endedCallback;
 
     DWORD m_targetProcessId;
     float m_volumeMultiplier;

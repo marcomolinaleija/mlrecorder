@@ -48,6 +48,17 @@ typedef struct MLR_ProcessInfo {
 
 typedef int (*MLR_ProcessCallback)(const MLR_ProcessInfo* info, void* user_data);
 
+// Stats for an active capture session.
+typedef struct MLR_SessionStats {
+    uint64_t bytes_written;    // Raw PCM bytes written to the encoder
+    double   duration_seconds; // Net recording time (paused time excluded)
+    int      is_paused;        // 1 if currently paused, 0 otherwise
+} MLR_SessionStats;
+
+// Callback fired from a background thread when a session ends unexpectedly
+// (process exit, device error). Do NOT call any mlrecorder API inside it.
+typedef void (*MLR_SessionEndedCallback)(uint32_t session_id, void* user_data);
+
 typedef struct MLR_InputDeviceInfo {
     const char* device_id_utf8;
     const char* friendly_name_utf8;
@@ -123,6 +134,16 @@ MLR_API int mlr_set_capture_volume(uint32_t process_id, float volume_0_to_1);
 
 // Returns active session count, or negative error code.
 MLR_API int mlr_get_active_session_count(void);
+
+// Register a callback fired when any capture session ends unexpectedly.
+// Pass NULL to clear. Safe to call before or after mlr_initialize.
+MLR_API void mlr_set_session_ended_callback(MLR_SessionEndedCallback callback, void* user_data);
+
+// Fill *out_stats for an active process capture. Returns MLR_OK or negative error code.
+MLR_API int mlr_get_session_stats(uint32_t process_id, MLR_SessionStats* out_stats);
+
+// Fill *out_stats for an active microphone capture. NULL/empty device_id = default.
+MLR_API int mlr_get_microphone_stats(const char* input_device_id_utf8, MLR_SessionStats* out_stats);
 
 // Microphone capture helpers. If input_device_id_utf8 is null/empty, default input is used.
 MLR_API int mlr_start_microphone_capture_to_file(
