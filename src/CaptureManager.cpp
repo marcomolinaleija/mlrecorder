@@ -359,7 +359,20 @@ bool CaptureManager::GetSessionStats(DWORD processId, uint64_t& outBytes, double
         return false;
     }
     const CaptureSession* s = it->second.get();
+    // Query actual compressed file size rather than raw PCM bytes
     outBytes = s->bytesWritten;
+    if (!s->outputFile.empty()) {
+        HANDLE hFile = CreateFileW(s->outputFile.c_str(), GENERIC_READ,
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                                   OPEN_EXISTING, 0, nullptr);
+        if (hFile != INVALID_HANDLE_VALUE) {
+            LARGE_INTEGER fileSize;
+            if (GetFileSizeEx(hFile, &fileSize)) {
+                outBytes = static_cast<uint64_t>(fileSize.QuadPart);
+            }
+            CloseHandle(hFile);
+        }
+    }
     outIsPaused = s->capture ? s->capture->IsPaused() : false;
 
     auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - s->startTime);
