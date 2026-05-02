@@ -855,17 +855,13 @@ int mlr_set_capture_volume(uint32_t process_id, float volume_0_to_1) {
         return MLR_E_INVALID_ARGUMENT;
     }
 
-    std::vector<CaptureSession*> sessions = state.captureManager->GetActiveSessions();
-    for (CaptureSession* session : sessions) {
-        if (session != nullptr && session->processId == process_id && session->capture != nullptr) {
-            session->capture->SetVolume(volume_0_to_1);
-            SetLastErrorLocked(std::string());
-            return MLR_OK;
-        }
+    if (!state.captureManager->SetVolume(process_id, volume_0_to_1)) {
+        SetLastErrorLocked("Capture session not found");
+        return MLR_E_PROCESS_NOT_FOUND;
     }
 
-    SetLastErrorLocked("Capture session not found");
-    return MLR_E_PROCESS_NOT_FOUND;
+    SetLastErrorLocked(std::string());
+    return MLR_OK;
 }
 
 int mlr_get_active_session_count(void) {

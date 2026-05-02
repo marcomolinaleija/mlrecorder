@@ -1,6 +1,10 @@
 #include "CaptureManager.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <mmreg.h>
+#include <ks.h>
+#include <ksmedia.h>
 
 CaptureManager::CaptureManager()
     : m_mixedRecordingEnabled(false), m_mixerThreadRunning(false) {
@@ -267,19 +271,31 @@ void CaptureManager::StopAllCaptures() {
 void CaptureManager::PauseAllCaptures() {
     std::lock_guard<std::mutex> lock(m_mutex);
 
+    const auto now = std::chrono::steady_clock::now();
     for (auto& pair : m_sessions) {
-        if (pair.second->capture) {
-            pair.second->capture->Pause();
+        CaptureSession* s = pair.second.get();
+        if (!s->capture || s->capture->IsPaused()) {
+            continue;
         }
+        s->capture->Pause();
+        s->isPausedForTiming = true;
+        s->pauseStartTime = now;
     }
 }
 
 void CaptureManager::ResumeAllCaptures() {
     std::lock_guard<std::mutex> lock(m_mutex);
 
+    const auto now = std::chrono::steady_clock::now();
     for (auto& pair : m_sessions) {
-        if (pair.second->capture) {
-            pair.second->capture->Resume();
+        CaptureSession* s = pair.second.get();
+        if (!s->capture || !s->capture->IsPaused()) {
+            continue;
+        }
+        s->capture->Resume();
+        if (s->isPausedForTiming) {
+            s->totalPausedDuration += now - s->pauseStartTime;
+            s->isPausedForTiming = false;
         }
     }
 }
@@ -324,6 +340,16 @@ bool CaptureManager::IsPaused(DWORD processId) const {
         return false;
     }
     return it->second->capture->IsPaused();
+}
+
+bool CaptureManager::SetVolume(DWORD processId, float volume) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_sessions.find(processId);
+    if (it == m_sessions.end() || !it->second->capture) {
+        return false;
+    }
+    it->second->capture->SetVolume(volume);
+    return true;
 }
 
 bool CaptureManager::GetSessionStats(DWORD processId, uint64_t& outBytes, double& outSeconds, bool& outIsPaused) const {
@@ -385,26 +411,46 @@ void CaptureManager::OnAudioData(DWORD processId, const BYTE* data, UINT32 size)
             UINT32 bytesPerSample = format->wBitsPerSample / 8;
             UINT32 numSamples = size / bytesPerSample;
 
-            // Define silence threshold (very low amplitude)
-            const int16_t SILENCE_THRESHOLD_16 = 50;  // ~0.15% of max amplitude
-            const int32_t SILENCE_THRESHOLD_32 = 3276;  // ~0.01% of max amplitude
-
             if (bytesPerSample == 2) {
-                // 16-bit samples
+                // 16-bit integer PCM — ~0.15% of max amplitude
+                const int16_t SILENCE_THRESHOLD_16 = 50;
                 const int16_t* samples = reinterpret_cast<const int16_t*>(data);
                 for (UINT32 i = 0; i < numSamples; i++) {
-                    if (abs(samples[i]) > SILENCE_THRESHOLD_16) {
+                    if (std::abs(samples[i]) > SILENCE_THRESHOLD_16) {
                         isSilent = false;
                         break;
                     }
                 }
             } else if (bytesPerSample == 4) {
-                // 32-bit samples
-                const int32_t* samples = reinterpret_cast<const int32_t*>(data);
-                for (UINT32 i = 0; i < numSamples; i++) {
-                    if (abs(samples[i]) > SILENCE_THRESHOLD_32) {
-                        isSilent = false;
-                        break;
+                // Determine whether this is IEEE float or 32-bit integer PCM.
+                // WASAPI almost always delivers float for 32-bit; casting to int32_t
+                // would produce wildly wrong threshold comparisons for float values.
+                bool isFloat = (format->wFormatTag == WAVE_FORMAT_IEEE_FLOAT);
+                if (!isFloat && format->wFormatTag == WAVE_FORMAT_EXTENSIBLE && format->cbSize >= 22) {
+                    const WAVEFORMATEXTENSIBLE* wfex =
+                        reinterpret_cast<const WAVEFORMATEXTENSIBLE*>(format);
+                    isFloat = (wfex->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT);
+                }
+
+                if (isFloat) {
+                    // ~0.1% of full scale
+                    const float SILENCE_THRESHOLD_F = 0.001f;
+                    const float* samples = reinterpret_cast<const float*>(data);
+                    for (UINT32 i = 0; i < numSamples; i++) {
+                        if (std::fabs(samples[i]) > SILENCE_THRESHOLD_F) {
+                            isSilent = false;
+                            break;
+                        }
+                    }
+                } else {
+                    // 32-bit integer PCM — ~0.1% of INT32_MAX
+                    const int32_t SILENCE_THRESHOLD_32 = 21474;
+                    const int32_t* samples = reinterpret_cast<const int32_t*>(data);
+                    for (UINT32 i = 0; i < numSamples; i++) {
+                        if (std::abs(samples[i]) > SILENCE_THRESHOLD_32) {
+                            isSilent = false;
+                            break;
+                        }
                     }
                 }
             }

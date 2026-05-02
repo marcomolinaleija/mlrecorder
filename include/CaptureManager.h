@@ -79,6 +79,9 @@ public:
     bool ResumeCapture(DWORD processId);
     bool IsPaused(DWORD processId) const;
 
+    // Set volume multiplier [0.0, 1.0] for an active session.
+    bool SetVolume(DWORD processId, float volume);
+
     // Stats: bytes written and net recording duration (excludes paused time).
     bool GetSessionStats(DWORD processId, uint64_t& outBytes, double& outSeconds, bool& outIsPaused) const;
 
