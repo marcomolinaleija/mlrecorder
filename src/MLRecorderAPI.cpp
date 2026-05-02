@@ -496,6 +496,8 @@ const char* mlr_result_to_string(int code) {
         return "Input device not found";
     case MLR_E_MIXED_RECORDING_FAILED:
         return "Mixed recording failed";
+    case MLR_E_NOT_CAPTURING:
+        return "Not currently capturing";
     default:
         return "Unknown error";
     }
@@ -760,6 +762,56 @@ int mlr_is_capturing(uint32_t process_id) {
     return state.captureManager->IsCapturing(process_id) ? 1 : 0;
 }
 
+int mlr_pause_capture(uint32_t process_id) {
+    RuntimeState& state = State();
+    std::lock_guard<std::mutex> lock(state.mutex);
+
+    const int initStatus = EnsureInitializedAndOwnedThreadLocked();
+    if (initStatus != MLR_OK) {
+        return initStatus;
+    }
+
+    if (!state.captureManager->IsCapturing(process_id)) {
+        SetLastErrorLocked("No active capture session for this process");
+        return MLR_E_NOT_CAPTURING;
+    }
+
+    state.captureManager->PauseCapture(process_id);
+    SetLastErrorLocked(std::string());
+    return MLR_OK;
+}
+
+int mlr_resume_capture(uint32_t process_id) {
+    RuntimeState& state = State();
+    std::lock_guard<std::mutex> lock(state.mutex);
+
+    const int initStatus = EnsureInitializedAndOwnedThreadLocked();
+    if (initStatus != MLR_OK) {
+        return initStatus;
+    }
+
+    if (!state.captureManager->IsCapturing(process_id)) {
+        SetLastErrorLocked("No active capture session for this process");
+        return MLR_E_NOT_CAPTURING;
+    }
+
+    state.captureManager->ResumeCapture(process_id);
+    SetLastErrorLocked(std::string());
+    return MLR_OK;
+}
+
+int mlr_is_paused(uint32_t process_id) {
+    RuntimeState& state = State();
+    std::lock_guard<std::mutex> lock(state.mutex);
+
+    const int initStatus = EnsureInitializedAndOwnedThreadLocked();
+    if (initStatus != MLR_OK) {
+        return initStatus;
+    }
+
+    return state.captureManager->IsPaused(process_id) ? 1 : 0;
+}
+
 int mlr_set_capture_volume(uint32_t process_id, float volume_0_to_1) {
     RuntimeState& state = State();
     std::lock_guard<std::mutex> lock(state.mutex);
@@ -926,6 +978,97 @@ int mlr_stop_microphone_capture(const char* input_device_id_utf8) {
     state.activeInputSessions.erase(inputDevice.deviceId);
     SetLastErrorLocked(std::string());
     return MLR_OK;
+}
+
+int mlr_pause_microphone_capture(const char* input_device_id_utf8) {
+    RuntimeState& state = State();
+    std::lock_guard<std::mutex> lock(state.mutex);
+
+    const int initStatus = EnsureInitializedAndOwnedThreadLocked();
+    if (initStatus != MLR_OK) {
+        return initStatus;
+    }
+
+    const std::wstring requestedDeviceId = Utf8ToWide(input_device_id_utf8);
+    AudioDeviceInfo inputDevice{};
+    size_t inputIndex = 0;
+    if (!ResolveInputDeviceLocked(requestedDeviceId, &inputDevice, &inputIndex)) {
+        SetLastErrorLocked("Input device not found");
+        return MLR_E_DEVICE_NOT_FOUND;
+    }
+
+    DWORD sessionId = BuildMicSessionId(inputIndex);
+    auto mapped = state.activeInputSessions.find(inputDevice.deviceId);
+    if (mapped != state.activeInputSessions.end()) {
+        sessionId = mapped->second;
+    }
+
+    if (!state.captureManager->IsCapturing(sessionId)) {
+        SetLastErrorLocked("No active microphone capture session");
+        return MLR_E_NOT_CAPTURING;
+    }
+
+    state.captureManager->PauseCapture(sessionId);
+    SetLastErrorLocked(std::string());
+    return MLR_OK;
+}
+
+int mlr_resume_microphone_capture(const char* input_device_id_utf8) {
+    RuntimeState& state = State();
+    std::lock_guard<std::mutex> lock(state.mutex);
+
+    const int initStatus = EnsureInitializedAndOwnedThreadLocked();
+    if (initStatus != MLR_OK) {
+        return initStatus;
+    }
+
+    const std::wstring requestedDeviceId = Utf8ToWide(input_device_id_utf8);
+    AudioDeviceInfo inputDevice{};
+    size_t inputIndex = 0;
+    if (!ResolveInputDeviceLocked(requestedDeviceId, &inputDevice, &inputIndex)) {
+        SetLastErrorLocked("Input device not found");
+        return MLR_E_DEVICE_NOT_FOUND;
+    }
+
+    DWORD sessionId = BuildMicSessionId(inputIndex);
+    auto mapped = state.activeInputSessions.find(inputDevice.deviceId);
+    if (mapped != state.activeInputSessions.end()) {
+        sessionId = mapped->second;
+    }
+
+    if (!state.captureManager->IsCapturing(sessionId)) {
+        SetLastErrorLocked("No active microphone capture session");
+        return MLR_E_NOT_CAPTURING;
+    }
+
+    state.captureManager->ResumeCapture(sessionId);
+    SetLastErrorLocked(std::string());
+    return MLR_OK;
+}
+
+int mlr_is_microphone_paused(const char* input_device_id_utf8) {
+    RuntimeState& state = State();
+    std::lock_guard<std::mutex> lock(state.mutex);
+
+    const int initStatus = EnsureInitializedAndOwnedThreadLocked();
+    if (initStatus != MLR_OK) {
+        return initStatus;
+    }
+
+    const std::wstring requestedDeviceId = Utf8ToWide(input_device_id_utf8);
+    AudioDeviceInfo inputDevice{};
+    size_t inputIndex = 0;
+    if (!ResolveInputDeviceLocked(requestedDeviceId, &inputDevice, &inputIndex)) {
+        return 0;
+    }
+
+    DWORD sessionId = BuildMicSessionId(inputIndex);
+    auto mapped = state.activeInputSessions.find(inputDevice.deviceId);
+    if (mapped != state.activeInputSessions.end()) {
+        sessionId = mapped->second;
+    }
+
+    return state.captureManager->IsPaused(sessionId) ? 1 : 0;
 }
 
 void mlr_stop_all_microphone_captures(void) {

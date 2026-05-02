@@ -262,6 +262,30 @@ def set_volume(pid: int, volume_0_to_1: float) -> None:
     initialize().set_capture_volume(pid, volume_0_to_1)
 
 
+def pause_recorder(pid: int) -> None:
+    initialize().pause_capture(pid)
+
+
+def resume_recorder(pid: int) -> None:
+    initialize().resume_capture(pid)
+
+
+def is_recorder_paused(pid: int) -> bool:
+    return initialize().is_capture_paused(pid)
+
+
+def pause_microphone(input_device_id: Optional[str] = None) -> None:
+    initialize().pause_microphone_capture(input_device_id)
+
+
+def resume_microphone(input_device_id: Optional[str] = None) -> None:
+    initialize().resume_microphone_capture(input_device_id)
+
+
+def is_microphone_paused(input_device_id: Optional[str] = None) -> bool:
+    return initialize().is_microphone_paused(input_device_id)
+
+
 def active_session_count() -> int:
     return initialize().active_session_count()
 
@@ -279,6 +303,15 @@ class RecorderSession:
     def set_volume(self, volume_0_to_1: float) -> None:
         set_volume(self.process_id, volume_0_to_1)
 
+    def pause(self) -> None:
+        pause_recorder(self.process_id)
+
+    def resume(self) -> None:
+        resume_recorder(self.process_id)
+
+    def is_paused(self) -> bool:
+        return is_recorder_paused(self.process_id)
+
     def __enter__(self) -> "RecorderSession":
         return self
 
@@ -295,6 +328,15 @@ class MicrophoneSession:
 
     def stop(self) -> None:
         stop_microphone(self.device_id)
+
+    def pause(self) -> None:
+        pause_microphone(self.device_id)
+
+    def resume(self) -> None:
+        resume_microphone(self.device_id)
+
+    def is_paused(self) -> bool:
+        return is_microphone_paused(self.device_id)
 
     def __enter__(self) -> "MicrophoneSession":
         return self

@@ -254,6 +254,35 @@ void CaptureManager::ResumeAllCaptures() {
     }
 }
 
+bool CaptureManager::PauseCapture(DWORD processId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_sessions.find(processId);
+    if (it == m_sessions.end() || !it->second->capture) {
+        return false;
+    }
+    it->second->capture->Pause();
+    return true;
+}
+
+bool CaptureManager::ResumeCapture(DWORD processId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_sessions.find(processId);
+    if (it == m_sessions.end() || !it->second->capture) {
+        return false;
+    }
+    it->second->capture->Resume();
+    return true;
+}
+
+bool CaptureManager::IsPaused(DWORD processId) const {
+    std::lock_guard<std::mutex> lock(const_cast<std::mutex&>(m_mutex));
+    auto it = m_sessions.find(processId);
+    if (it == m_sessions.end() || !it->second->capture) {
+        return false;
+    }
+    return it->second->capture->IsPaused();
+}
+
 std::vector<CaptureSession*> CaptureManager::GetActiveSessions() {
     std::lock_guard<std::mutex> lock(m_mutex);
 

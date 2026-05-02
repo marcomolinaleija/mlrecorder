@@ -177,6 +177,15 @@ class MLRecorder:
         self._dll.mlr_set_capture_volume.argtypes = [ctypes.c_uint32, ctypes.c_float]
         self._dll.mlr_set_capture_volume.restype = ctypes.c_int
 
+        self._dll.mlr_pause_capture.argtypes = [ctypes.c_uint32]
+        self._dll.mlr_pause_capture.restype = ctypes.c_int
+
+        self._dll.mlr_resume_capture.argtypes = [ctypes.c_uint32]
+        self._dll.mlr_resume_capture.restype = ctypes.c_int
+
+        self._dll.mlr_is_paused.argtypes = [ctypes.c_uint32]
+        self._dll.mlr_is_paused.restype = ctypes.c_int
+
         self._dll.mlr_get_active_session_count.argtypes = []
         self._dll.mlr_get_active_session_count.restype = ctypes.c_int
 
@@ -205,6 +214,15 @@ class MLRecorder:
 
         self._dll.mlr_stop_all_microphone_captures.argtypes = []
         self._dll.mlr_stop_all_microphone_captures.restype = None
+
+        self._dll.mlr_pause_microphone_capture.argtypes = [ctypes.c_char_p]
+        self._dll.mlr_pause_microphone_capture.restype = ctypes.c_int
+
+        self._dll.mlr_resume_microphone_capture.argtypes = [ctypes.c_char_p]
+        self._dll.mlr_resume_microphone_capture.restype = ctypes.c_int
+
+        self._dll.mlr_is_microphone_paused.argtypes = [ctypes.c_char_p]
+        self._dll.mlr_is_microphone_paused.restype = ctypes.c_int
 
         self._dll.mlr_enable_mixed_recording_to_file.argtypes = [
             ctypes.c_char_p,
@@ -352,6 +370,19 @@ class MLRecorder:
         code = self._dll.mlr_set_capture_volume(ctypes.c_uint32(process_id), ctypes.c_float(volume_0_to_1))
         self._raise_if_error(code, "mlr_set_capture_volume failed")
 
+    def pause_capture(self, process_id: int) -> None:
+        code = self._dll.mlr_pause_capture(ctypes.c_uint32(process_id))
+        self._raise_if_error(code, "mlr_pause_capture failed")
+
+    def resume_capture(self, process_id: int) -> None:
+        code = self._dll.mlr_resume_capture(ctypes.c_uint32(process_id))
+        self._raise_if_error(code, "mlr_resume_capture failed")
+
+    def is_capture_paused(self, process_id: int) -> bool:
+        code = self._dll.mlr_is_paused(ctypes.c_uint32(process_id))
+        self._raise_if_error(code, "mlr_is_paused failed")
+        return bool(code)
+
     def active_session_count(self) -> int:
         code = self._dll.mlr_get_active_session_count()
         self._raise_if_error(code, "mlr_get_active_session_count failed")
@@ -401,6 +432,19 @@ class MLRecorder:
 
     def stop_all_microphone_captures(self) -> None:
         self._dll.mlr_stop_all_microphone_captures()
+
+    def pause_microphone_capture(self, input_device_id: Optional[str] = None) -> None:
+        code = self._dll.mlr_pause_microphone_capture(self._encode_optional(input_device_id))
+        self._raise_if_error(code, "mlr_pause_microphone_capture failed")
+
+    def resume_microphone_capture(self, input_device_id: Optional[str] = None) -> None:
+        code = self._dll.mlr_resume_microphone_capture(self._encode_optional(input_device_id))
+        self._raise_if_error(code, "mlr_resume_microphone_capture failed")
+
+    def is_microphone_paused(self, input_device_id: Optional[str] = None) -> bool:
+        code = self._dll.mlr_is_microphone_paused(self._encode_optional(input_device_id))
+        self._raise_if_error(code, "mlr_is_microphone_paused failed")
+        return bool(code)
 
     def enable_mixed_recording_to_file(self, output_file: str, fmt: int = FORMAT_WAV, bitrate: int = 0) -> None:
         code = self._dll.mlr_enable_mixed_recording_to_file(

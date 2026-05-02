@@ -66,6 +66,11 @@ public:
     // Stop capturing from a specific process
     bool StopCapture(DWORD processId);
 
+    // Pause/resume a specific capture session
+    bool PauseCapture(DWORD processId);
+    bool ResumeCapture(DWORD processId);
+    bool IsPaused(DWORD processId) const;
+
     // Stop all captures
     void StopAllCaptures();
 

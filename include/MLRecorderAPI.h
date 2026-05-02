@@ -35,7 +35,8 @@ typedef enum MLR_Result {
     MLR_E_PROCESS_ISOLATION_UNAVAILABLE = -8,
     MLR_E_INTERNAL = -9,
     MLR_E_DEVICE_NOT_FOUND = -10,
-    MLR_E_MIXED_RECORDING_FAILED = -11
+    MLR_E_MIXED_RECORDING_FAILED = -11,
+    MLR_E_NOT_CAPTURING = -12
 } MLR_Result;
 
 typedef struct MLR_ProcessInfo {
@@ -106,6 +107,17 @@ MLR_API void mlr_stop_all_captures(void);
 // Returns 1 if capturing, 0 if not, or negative error code.
 MLR_API int mlr_is_capturing(uint32_t process_id);
 
+// Pause an active capture session without closing the output file.
+// Returns MLR_E_NOT_CAPTURING if the session does not exist.
+MLR_API int mlr_pause_capture(uint32_t process_id);
+
+// Resume a previously paused capture session.
+// Returns MLR_E_NOT_CAPTURING if the session does not exist.
+MLR_API int mlr_resume_capture(uint32_t process_id);
+
+// Returns 1 if the session exists and is paused, 0 otherwise (including not capturing).
+MLR_API int mlr_is_paused(uint32_t process_id);
+
 // Set volume for an active session by PID. Volume range: [0.0, 1.0].
 MLR_API int mlr_set_capture_volume(uint32_t process_id, float volume_0_to_1);
 
@@ -131,6 +143,14 @@ MLR_API int mlr_start_microphone_capture_to_directory(
 
 MLR_API int mlr_stop_microphone_capture(const char* input_device_id_utf8);
 MLR_API void mlr_stop_all_microphone_captures(void);
+
+// Pause/resume a microphone capture session. NULL/empty input_device_id uses the default device.
+// Returns MLR_E_NOT_CAPTURING if the session does not exist.
+MLR_API int mlr_pause_microphone_capture(const char* input_device_id_utf8);
+MLR_API int mlr_resume_microphone_capture(const char* input_device_id_utf8);
+
+// Returns 1 if the microphone session is paused, 0 otherwise (including not capturing).
+MLR_API int mlr_is_microphone_paused(const char* input_device_id_utf8);
 
 // Mixed recording (mix all active sessions into one output file).
 MLR_API int mlr_enable_mixed_recording_to_file(
